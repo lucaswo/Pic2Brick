@@ -278,14 +278,14 @@ if __name__ == '__main__':
 
     parser.add_argument("-i", "--input", type=str, help="input image", required=True)
 
-    parser.add_argument("-o", "--output", type=str, help="output xml file", default="out.xml")
+    parser.add_argument("-o", "--output", type=str, help="output xml file. Defaults to out.xml and overwrites any previous output with the same name.", default="out.xml")
 
     parser.add_argument("-sm", "--smooth", type=int, 
-        help="Smoothing factor for prefiltering. Increase for removing artifacts. Can only be odd.", default=1)
+        help="Smoothing factor for prefiltering. Increase for removing artifacts. Can only be odd. Defaults to 1.", default=1)
 
-    parser.add_argument("-s", "--size", type=int, help="Max size for the output image in pixels.", default=32)
+    parser.add_argument("-s", "--size", type=int, help="Max size for the output image in pixels/studs. Defaults to 32.", default=32)
 
-    parser.add_argument("-ms", "--maxsize", type=int, help="Max size of an individual LEGO plate in pixels.", default=12)
+    parser.add_argument("-ms", "--maxsize", type=int, help="Max size of an individual LEGO plate in studs. Defaults to 12.", default=12)
 
     args = parser.parse_args()
 
