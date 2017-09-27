@@ -250,7 +250,7 @@ def main(args):
         for y in range(final.size[0]):
             G.add_node(str(x)+"|"+str(y), x=x, y=y)
             colors[str(x)+"|"+str(y)] = final_arr[x,y]/255
-            pos[str(x)+"|"+str(y)] = [y,32-x]
+            pos[str(x)+"|"+str(y)] = [y,h-x]
             i += 1
             
             if x!=0 and np.array_equal(final_arr[x,y], final_arr[x-1,y]):
