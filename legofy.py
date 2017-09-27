@@ -190,18 +190,26 @@ def build_xml(measures, plate_colours, part_table):
     return xml_string
 
 
-def build_instructions(G, meh, pos, colors):
+def build_instructions(G, meh, pos, colors, w, h, ratio):
     i = 0
     nodes_draw = []
+    edges_draw = G.subgraph(meh[-1]).edges()
+    chassis_graph = nx.Graph()
+    chassis_graph.add_nodes_from([1,2,3,4])
 
     shutil.rmtree('instructions')
     os.mkdir("instructions")
 
     while i < len(meh):
         nodes_draw.extend(meh[i])
-        plt.figure(figsize=(6,8))
+        edges_draw.extend(G.subgraph(meh[i]).edges())
 
-        nx.draw(G, nodelist=nodes_draw, pos=pos, node_color=[colors[c] for c in nodes_draw], node_size=50)
+        plt.figure(figsize=(9*ratio,9))
+
+        nx.draw(chassis_graph, pos={1: [w,1], 2: [w,h], 3: [-1,1], 4: [-1,h]}, node_color="red", node_size=100,
+            node_shape="s")
+        nx.draw(G, nodelist=nodes_draw, pos=pos, node_color=[colors[c] for c in nodes_draw], node_size=100,
+            edgelist=edges_draw, width=3.0)
         plt.savefig("instructions/{}.png".format(i+1))
 
         plt.close()
@@ -270,8 +278,8 @@ def main(args):
 
     print("Saved xml to {}".format(args.output))
 
-    build_instructions(G, meh, pos, colors)
-    print("instructions are in 'instructions/'")
+    build_instructions(G, meh, pos, colors, w, h, ratio)
+    print("Saved instructions to 'instructions/'")
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Legofy your image.')
