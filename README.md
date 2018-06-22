@@ -19,7 +19,7 @@ The options should be printed if you call `python3 legofy.py -h`
 ```
 >>> python3 legofy.py -h
 usage: legofy.py [-h] -i INPUT [-o OUTPUT] [-sm SMOOTH] [-s SIZE]
-                 [-ms MAXSIZE]
+                 [-ms MAXSIZE] [-rgb RGB]
 
 Legofy your image.
 
@@ -38,6 +38,8 @@ optional arguments:
   -ms MAXSIZE, --maxsize MAXSIZE
                         Max size of an individual LEGO plate in studs.
                         Defaults to 12.
+  -rgb RGB              If not zero, RGB is used for distances between pixels,
+                        otherwise LAB. Defaults to 1.
 ```
 
 Have fun legofying around!

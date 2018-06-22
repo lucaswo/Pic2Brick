@@ -42,19 +42,30 @@ def get_colours():
                              columns=["r", "g", "b"])
     colour_table = colour_table.merge(rgb_table, left_index=True, right_index=True)
     current_colours = colour_table[colour_table["Color Timeline"].str.contains("2018")]
-    current_colours = current_colours[~(current_colours["Name"].str.contains("Flesh") 
-                                        | current_colours["Name"].str.contains("Dark Pink")
-                                        | (current_colours["Name"] == "Lavender")
-                                        | current_colours["Name"].str.contains("Sand Blue")
-                                        | current_colours["Name"].str.contains("Olive Green")
-                                        | current_colours["Name"].str.contains("Light Yellow")
-                                        | (current_colours["Name"] == "Lime"))]
+    current_colours = current_colours[~(current_colours["Name"].str.contains("Sand Blue") 
+                                    | current_colours["Name"].str.contains("Dark Green")
+                                    | current_colours["Name"].str.contains("Lavender")
+                                    | current_colours["Name"].str.contains("Dark Flesh")
+                                    | current_colours["Name"].str.contains("Light Flesh")
+                                    | current_colours["Name"].str.contains("Olive Green")
+                                    | current_colours["Name"].str.contains("Very Light Bluish Gray")
+                                    | current_colours["Name"].str.contains("Dark Bluish Gray")
+                                    | current_colours["Name"].str.contains("Light Yellow")
+                                    | current_colours["Name"].str.contains("Yellowish Green")
+                                    | current_colours["Name"].str.contains("Turquoise")
+                                    | current_colours["Name"].str.contains("Magenta")
+                                    | (current_colours["Name"] == "Lime")
+                                    | (current_colours["Name"] == "Dark Brown")
+                                    | (current_colours["Name"] == "Sand Green")
+                                    | (current_colours["Name"] == "Dark Azure")
+                                    | (current_colours["Name"] == "Dark Blue")
+                                    | (current_colours["Name"] == "Light Aqua"))]
 
     return current_colours
 
 def fit_NN(current_colours, rgb):
     if rgb:
-        nn = NearestNeighbors(n_neighbors=1, algorithm='brute', metric="euclidean")
+        nn = NearestNeighbors(n_neighbors=1, algorithm='brute')
     else:
         nn = NearestNeighbors(n_neighbors=1, algorithm='brute', metric=my_lab_metric)
     nn.fit(current_colours[["r", "g", "b"]])
@@ -233,6 +244,7 @@ def build_instructions(G, meh, pos, colors, w, h, ratio, name):
         i += 1
 
 def main(args):
+    assert args.maxsize <= 12 and args.maxsize > 0, "Brick size can only be between 1 and 12."
     image = Image.open(args.input)
     name = args.input.split(".")[0]
     current_colours = get_colours()
@@ -309,7 +321,7 @@ if __name__ == '__main__':
     parser.add_argument("-sm", "--smooth", type=int, 
         help="Smoothing factor for prefiltering. Increase for removing artifacts. Can only be odd. Defaults to 1.", default=1)
 
-    parser.add_argument("-s", "--size", type=int, help="Max size for the output image in pixels/studs. Defaults to 32.", default=32)
+    parser.add_argument("-s", "--size", type=int, help="Max size for the output image in pixels/studs. Defaults to 32.", default=32, max=12, min=1)
 
     parser.add_argument("-ms", "--maxsize", type=int, help="Max size of an individual LEGO plate in studs. Defaults to 12.", default=12)
 
