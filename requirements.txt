@@ -6,3 +6,4 @@ sklearn
 numpy
 networkx
 matplotlib
+skimage

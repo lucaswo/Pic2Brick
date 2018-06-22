@@ -10,12 +10,23 @@ import matplotlib.pyplot as plt
 from argparse import ArgumentParser
 import os
 import shutil
+from skimage import color as colorcv
 
 import warnings
 warnings.filterwarnings("ignore")
 
 def hextoint(hexcode):
     return (int(hexcode[:2], 16), int(hexcode[2:4], 16), int(hexcode[4:], 16))
+
+def my_lab_metric(x, y):
+    x = x / 255
+    y = y / 255
+
+    both = np.vstack((x,y)).reshape(1,-1,3)
+
+    x,y = colorcv.rgb2lab(both)[0]
+
+    return np.linalg.norm(x-y)
 
 def get_colours():
     headers = {
@@ -30,7 +41,7 @@ def get_colours():
     rgb_table = pd.DataFrame([hextoint(td.attrs["bgcolor"]) for td in html_table.select("td[bgcolor]")], 
                              columns=["r", "g", "b"])
     colour_table = colour_table.merge(rgb_table, left_index=True, right_index=True)
-    current_colours = colour_table[colour_table["Color Timeline"].str.contains("2017")]
+    current_colours = colour_table[colour_table["Color Timeline"].str.contains("2018")]
     current_colours = current_colours[~(current_colours["Name"].str.contains("Flesh") 
                                         | current_colours["Name"].str.contains("Dark Pink")
                                         | (current_colours["Name"] == "Lavender")
@@ -41,8 +52,11 @@ def get_colours():
 
     return current_colours
 
-def fit_NN(current_colours):
-    nn = NearestNeighbors(n_neighbors=1, algorithm='brute')
+def fit_NN(current_colours, rgb):
+    if rgb:
+        nn = NearestNeighbors(n_neighbors=1, algorithm='brute', metric="euclidean")
+    else:
+        nn = NearestNeighbors(n_neighbors=1, algorithm='brute', metric=my_lab_metric)
     nn.fit(current_colours[["r", "g", "b"]])
 
     return nn
@@ -190,15 +204,18 @@ def build_xml(measures, plate_colours, part_table):
     return xml_string
 
 
-def build_instructions(G, meh, pos, colors, w, h, ratio):
+def build_instructions(G, meh, pos, colors, w, h, ratio, name):
     i = 0
     nodes_draw = []
-    edges_draw = G.subgraph(meh[-1]).edges()
+    edges_draw = list(G.subgraph(meh[-1]).edges())
     chassis_graph = nx.Graph()
     chassis_graph.add_nodes_from([1,2,3,4])
 
-    shutil.rmtree('instructions')
-    os.mkdir("instructions")
+    path_name = "instructions_{}".format(name)
+
+    if os.path.exists(path_name):
+        shutil.rmtree(path_name)
+    os.mkdir(path_name)
 
     while i < len(meh):
         nodes_draw.extend(meh[i])
@@ -210,15 +227,16 @@ def build_instructions(G, meh, pos, colors, w, h, ratio):
             node_shape="s")
         nx.draw(G, nodelist=nodes_draw, pos=pos, node_color=[colors[c] for c in nodes_draw], node_size=100,
             edgelist=edges_draw, width=3.0)
-        plt.savefig("instructions/{}.png".format(i+1))
+        plt.savefig("{}/{}.png".format(path_name,i+1))
 
         plt.close()
         i += 1
 
 def main(args):
     image = Image.open(args.input)
+    name = args.input.split(".")[0]
     current_colours = get_colours()
-    nn = fit_NN(current_colours)
+    nn = fit_NN(current_colours, args.rgb)
 
     w10 = int(image.size[0]/10)
     h10 = int(image.size[1]/10)
@@ -244,7 +262,7 @@ def main(args):
     final = pixelated.resize((w,h))
     final_arr = np.array(final)
 
-    preview = args.input.split(".")[0] + "_preview.png"
+    preview =  "{}_preview.png".format(name)
     final.resize(image.size).save(preview)
     print("Saved preview under {}".format(preview))
 
@@ -278,15 +296,15 @@ def main(args):
 
     print("Saved xml to {}".format(args.output))
 
-    build_instructions(G, meh, pos, colors, w, h, ratio)
-    print("Saved instructions to 'instructions/'")
+    build_instructions(G, meh, pos, colors, w, h, ratio, name)
+    print("Saved instructions to 'instructions_{}/'".format(name))
 
 if __name__ == '__main__':
     parser = ArgumentParser(description='Legofy your image.')
 
     parser.add_argument("-i", "--input", type=str, help="input image", required=True)
 
-    parser.add_argument("-o", "--output", type=str, help="output xml file. Defaults to out.xml and overwrites any previous output with the same name.", default="out.xml")
+    parser.add_argument("-o", "--output", type=str, help="output xml file", required=True)
 
     parser.add_argument("-sm", "--smooth", type=int, 
         help="Smoothing factor for prefiltering. Increase for removing artifacts. Can only be odd. Defaults to 1.", default=1)
@@ -294,6 +312,8 @@ if __name__ == '__main__':
     parser.add_argument("-s", "--size", type=int, help="Max size for the output image in pixels/studs. Defaults to 32.", default=32)
 
     parser.add_argument("-ms", "--maxsize", type=int, help="Max size of an individual LEGO plate in studs. Defaults to 12.", default=12)
+
+    parser.add_argument("-rgb", type=int, help="If not zero, RGB is used for distances between pixels, otherwise LAB. Defaults to 1.", default=1)
 
     args = parser.parse_args()
 
