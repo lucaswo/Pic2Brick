@@ -41,25 +41,7 @@ def get_colours():
     rgb_table = pd.DataFrame([hextoint(td.attrs["bgcolor"]) for td in html_table.select("td[bgcolor]")], 
                              columns=["r", "g", "b"])
     colour_table = colour_table.merge(rgb_table, left_index=True, right_index=True)
-    current_colours = colour_table[colour_table["Color Timeline"].str.contains("2018")]
-    current_colours = current_colours[~(current_colours["Name"].str.contains("Sand Blue") 
-                                    | current_colours["Name"].str.contains("Dark Green")
-                                    | current_colours["Name"].str.contains("Lavender")
-                                    | current_colours["Name"].str.contains("Dark Flesh")
-                                    | current_colours["Name"].str.contains("Light Flesh")
-                                    | current_colours["Name"].str.contains("Olive Green")
-                                    | current_colours["Name"].str.contains("Very Light Bluish Gray")
-                                    | current_colours["Name"].str.contains("Dark Bluish Gray")
-                                    | current_colours["Name"].str.contains("Light Yellow")
-                                    | current_colours["Name"].str.contains("Yellowish Green")
-                                    | current_colours["Name"].str.contains("Turquoise")
-                                    | current_colours["Name"].str.contains("Magenta")
-                                    | (current_colours["Name"] == "Lime")
-                                    | (current_colours["Name"] == "Dark Brown")
-                                    | (current_colours["Name"] == "Sand Green")
-                                    | (current_colours["Name"] == "Dark Azure")
-                                    | (current_colours["Name"] == "Dark Blue")
-                                    | (current_colours["Name"] == "Light Aqua"))]
+    current_colours = colour_table[colour_table["For Sale"] > 600]
 
     return current_colours
 

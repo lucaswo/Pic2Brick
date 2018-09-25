@@ -1,6 +1,8 @@
 # legofy
 Build pictures with LEGO®
 
+![There should be an image here.](https://lineupr.com/images/157/9d185fd0b0ca44ece3fe01f8f24cdebc/a69c31db7c.jpeg)
+
 ### Install
 Just get all packages with (make sure that you are using Python 3):
 
