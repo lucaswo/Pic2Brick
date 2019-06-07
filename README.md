@@ -1,7 +1,7 @@
 # legofy
 Build pictures with LEGO®
 
-![There should be an image here.](https://output-dd.de/wp-content/uploads/2018/12/girl_logo.png)
+![There should be an image here.](logo.png)
 
 ### Install
 Just get all packages with (make sure that you are using Python 3):
