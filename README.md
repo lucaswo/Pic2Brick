@@ -23,7 +23,7 @@ The options should be printed if you call `python3 pic2brick.py -h`
 usage: pic2brick.py [-h] -i INPUT [-o OUTPUT] [-sm SMOOTH] [-s SIZE]
                  [-ms MAXSIZE] [-rgb RGB]
 
-Legofy your image.
+Build your image with bricks.
 
 optional arguments:
   -h, --help            show this help message and exit

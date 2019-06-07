@@ -54,7 +54,7 @@ def fit_NN(current_colours, rgb):
 
     return nn
 
-def legofy(pixel, nn, colours):
+def pic2brick(pixel, nn, colours):
     new_pixel = nn.kneighbors(pixel.reshape(1, -1), return_distance=False)[0][0]
     return tuple(colours.iloc[new_pixel, -3:])
 
@@ -241,7 +241,7 @@ def main(args):
     pixelated = image.filter(ImageFilter.MedianFilter(args.smooth)).resize((2*w10,2*h10))
 
     pixelated = np.array(pixelated)
-    pixelated = np.apply_along_axis(legofy, 2, pixelated, nn, current_colours)
+    pixelated = np.apply_along_axis(pic2brick, 2, pixelated, nn, current_colours)
     pixelated = Image.fromarray(np.uint8(pixelated), mode="RGB")
 
     max_size = args.size
@@ -294,7 +294,7 @@ def main(args):
     print("Saved instructions to 'instructions_{}/'".format(name))
 
 if __name__ == '__main__':
-    parser = ArgumentParser(description='Legofy your image.')
+    parser = ArgumentParser(description='Build your image with bricks.')
 
     parser.add_argument("-i", "--input", type=str, help="input image", required=True)
 
