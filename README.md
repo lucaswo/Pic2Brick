@@ -1,7 +1,7 @@
 # legofy
 Build pictures with LEGO®
 
-![There should be an image here.](https://lineupr.com/images/157/9d185fd0b0ca44ece3fe01f8f24cdebc/a69c31db7c.jpeg)
+![There should be an image here.](https://output-dd.de/wp-content/uploads/2018/12/girl_logo.png)
 
 ### Install
 Just get all packages with (make sure that you are using Python 3):
@@ -11,16 +11,16 @@ pip3 install -r requirements.txt
 ```
 
 ### Usage
-The `legofy.py` script can be executed via
+The `pic2brick.py` script can be executed via
 ```bash
-python3 legofy.py [options]
+python3 pic2brick.py [options]
 ```
 
-The options should be printed if you call `python3 legofy.py -h`
+The options should be printed if you call `python3 pic2brick.py -h`
 
 ```
->>> python3 legofy.py -h
-usage: legofy.py [-h] -i INPUT [-o OUTPUT] [-sm SMOOTH] [-s SIZE]
+>>> python3 pic2brick.py -h
+usage: pic2brick.py [-h] -i INPUT [-o OUTPUT] [-sm SMOOTH] [-s SIZE]
                  [-ms MAXSIZE] [-rgb RGB]
 
 Legofy your image.
@@ -44,4 +44,4 @@ optional arguments:
                         otherwise LAB. Defaults to 1.
 ```
 
-Have fun legofying around!
+Have fun bricking around!
