@@ -1,4 +1,4 @@
-# legofy
+# Pic2Brick
 Build pictures with LEGO®
 
 ![There should be an image here.](logo.png)
