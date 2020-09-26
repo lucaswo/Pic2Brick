@@ -2,8 +2,8 @@ requests
 beautifulsoup4
 pandas
 pillow
-sklearn
 numpy
 networkx
 matplotlib
 skimage
+scipy

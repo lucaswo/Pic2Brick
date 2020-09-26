@@ -1,5 +1,5 @@
 # Pic2Brick
-Build pictures with LEGO®
+Build pictures with LEGO® or any other compatible bricks.
 
 ![There should be an image here.](logo.png)
 
@@ -35,13 +35,20 @@ optional arguments:
   -sm SMOOTH, --smooth SMOOTH
                         Smoothing factor for prefiltering. Increase for
                         removing artifacts. Can only be odd. Defaults to 1.
-  -s SIZE, --size SIZE  Max size for the output image in pixels/studs.
+  -s SIZE, --size SIZE  
+                        Max size for the output image in pixels/studs.
                         Defaults to 32.
-  -ms MAXSIZE, --maxsize MAXSIZE
-                        Max size of an individual LEGO plate in studs.
+  -ml MAXLENGTH, --maxlength MAXLENGTH
+                        Max length of an individual LEGO plate in studs.
                         Defaults to 12.
-  -rgb RGB              If not zero, RGB is used for distances between pixels,
-                        otherwise LAB. Defaults to 1.
+  -mw MAXWIDTH, --maxwidth MAXWIDTH
+                        Max width of an individual LEGO plate in studs.
+                        Defaults to 6.
+  -lab LAB              
+                        If not zero, LAB is used for distances between pixels,
+                        otherwise RGB. Defaults to 1.
 ```
 
 Have fun bricking around!
+
+LEGO® is a registered trademark of the LEGO group of companies and does not sponsor, authorize, or endorse this project.

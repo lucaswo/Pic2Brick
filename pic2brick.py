@@ -2,7 +2,6 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 from PIL import Image, ImageFilter, ImageCms
-from sklearn.neighbors import NearestNeighbors
 import numpy as np
 from collections import defaultdict
 import networkx as nx
@@ -11,22 +10,14 @@ from argparse import ArgumentParser
 import os
 import shutil
 from skimage import color as colorcv
+from datetime import datetime
+from scipy.spatial import distance_matrix
 
 import warnings
 warnings.filterwarnings("ignore")
 
 def hextoint(hexcode):
     return (int(hexcode[:2], 16), int(hexcode[2:4], 16), int(hexcode[4:], 16))
-
-def my_lab_metric(x, y):
-    x = x / 255
-    y = y / 255
-
-    both = np.vstack((x,y)).reshape(1,-1,3)
-
-    x,y = colorcv.rgb2lab(both)[0]
-
-    return np.linalg.norm(x-y)
 
 def get_colours():
     headers = {
@@ -41,55 +32,51 @@ def get_colours():
     rgb_table = pd.DataFrame([hextoint(td.attrs["bgcolor"]) for td in html_table.select("td[bgcolor]")], 
                              columns=["r", "g", "b"])
     colour_table = colour_table.merge(rgb_table, left_index=True, right_index=True)
-    current_colours = colour_table[colour_table["For Sale"] > 600]
+    current_colours = colour_table[(colour_table["Color Timeline"].str.contains(str(datetime.now().year)))]
+    current_colours = current_colours.reset_index(drop=True)
+    current_colours[["l", "a", "b2"]] = pd.DataFrame(
+        colorcv.rgb2lab(current_colours[["r", "g", "b"]].values.reshape(1, -1, 3)/255)[0])
 
     return current_colours
 
-def fit_NN(current_colours, rgb):
-    if rgb:
-        nn = NearestNeighbors(n_neighbors=1, algorithm='brute')
-    else:
-        nn = NearestNeighbors(n_neighbors=1, algorithm='brute', metric=my_lab_metric)
-    nn.fit(current_colours[["r", "g", "b"]])
-
-    return nn
-
-def pic2brick(pixel, nn, colours):
-    new_pixel = nn.kneighbors(pixel.reshape(1, -1), return_distance=False)[0][0]
-    return tuple(colours.iloc[new_pixel, -3:])
-
-def find_rectangles(G, max_size=8):
-    assert max_size % 2 == 0 or max_size < 4, "Even numbers for max_size only!"
+def find_rectangles(G, named_colors, maxim_size=12, maxim_width=6, critical_colors=set([])):
+    assert maxim_size % 2 == 0 or maxim_size < 4, "Even numbers for max_size only!"
     bad_dims = set([5, 7, 9, 11, 13])
     all_rectangles = []
     
     # all connected subgraphs
-    for gr in nx.algorithms.connected_component_subgraphs(G):
+    for c in nx.connected_components(G):
+        gr = nx.Graph(G.subgraph(c))
+        max_size = maxim_size
+        max_width = maxim_width
         while list(gr.nodes()): # as long as there are nodes
             node = min(gr.nodes(), key=lambda x: [int(y) for y in x.split("|")]) # get min x,y
+            if named_colors[node] in critical_colors:
+                max_size = 6
+                max_width = 6
             rectangle = []
-            count = 0
+            count_south = 0
 
             # vertical edge (expand southwards) until bottom line of subgraph
             # or max size
-            while node in gr and count <= max_size - 1:
+            while node in gr and count_south <= max_size - 1:
                 rectangle.append(node)
                 x,y = node.split("|")
                 node = "{}|{}".format(int(x)+1, y)
                 # widths > 4 are: 6, 8, 10, 12, 14
-                if count > 2:
-                    if node in gr and count + 1 <= max_size - 1:
+                if count_south > 2:
+                    if node in gr and count_south + 1 <= max_size - 1:
                         rectangle.append(node)
                         node = "{}|{}".format(int(x)+2, y)
-                        count += 1
-                count += 1
+                        count_south += 1
+                count_south += 1
             
             # 5 and 3 are stupid numbers for LEGO plates, 
             # 3 can only occur in one dimension,
             # 5 can never occur anywhere
-            if count in bad_dims:
+            if count_south in bad_dims:
                 rectangle.pop(-1)
-            if count == 3:
+            if count_south == 3:
                 bloody_3 = True
             else:
                 bloody_3 = False
@@ -97,7 +84,7 @@ def find_rectangles(G, max_size=8):
             final_rectangle = rectangle
             
             border_found = False
-            count = 0
+            count_north = 0
             
             # horizontal edge (expand eastwards)
             while (not border_found):
@@ -107,18 +94,18 @@ def find_rectangles(G, max_size=8):
                     
                     node = "{}|{}".format(x, int(y)+1)
                     # widths > 4 are: 6, 8, 10, 12  
-                    if count > 2:
-                        if node in gr and count + 1 <= max_size - 1:
+                    if count_north > 2:
+                        if node in gr and count_north + 1 <= max_width - 1:
                             right_border.append(node)
                             node = "{}|{}".format(x, int(y)+2)
-                            count += 1
                     # found right border of colour (not in subgraph)
                     # or reached max size
                     # or the first dimension is 3 and so the second dimension must be <= 3
                     # or the second would be 3 (not possible)
-                    if count == 1:
+                    if count_north == 1:
                         node_la = "{}|{}".format(x, int(y)+2)
-                    if (node not in gr) or (count >= max_size - 1) or (bloody_3 and count > 0) or (count == 1 and node_la not in gr):
+                    if (node not in gr) or (count_north >= max_width - 1) or (bloody_3 and count_north > 0)\
+                                        or (count_north == 1 and node_la not in gr and count_south > 2):
                         gr.remove_nodes_from(final_rectangle)
                         all_rectangles.append(final_rectangle)
                         border_found = True
@@ -129,18 +116,19 @@ def find_rectangles(G, max_size=8):
                 if not border_found:
                     final_rectangle += right_border
                     rectangle = right_border
-                    count += 1
+                    if count_north > 2:
+                        count_north += 2
+                    else:
+                        count_north += 1
                     
     return all_rectangles
 
-def get_parts(meh, nn, colors, current_colours):
+def get_parts(meh, named_colors):
     measures = []
     plate_colours = []
 
     for rect in meh:
-        
-        row = nn.kneighbors(np.array(colors[rect[0]]*255).reshape(1, -1), return_distance=False)[0][0]
-        color = current_colours.iloc[row, 0]
+        color = named_colors[rect[0]]
         
         key_x = lambda x: int(x.split("|")[0])
         key_y = lambda y: int(y.split("|")[1])
@@ -154,7 +142,7 @@ def get_parts(meh, nn, colors, current_colours):
         measures.append("{} x {}".format(min(max_x-min_x+1, max_y-min_y+1), max(max_x-min_x+1, max_y-min_y+1)))
         plate_colours.append(color)
     
-    return(measures, plate_colours)
+    return measures, plate_colours
 
 def get_part_list():
     headers = {
@@ -188,7 +176,8 @@ def build_xml(measures, plate_colours, part_table):
     for plate, color in zip(measures, plate_colours):
         p_id = part_table[part_table["Description"] == plate]["ID"].values[0]
         order[str(p_id) + "|" + str(color)] += 1
-        
+    
+    print("Found {} items".format(len(order)))
     for plate, num  in order.items():
         xml_string += item_string.format(*plate.split("|"), num)
 
@@ -197,7 +186,7 @@ def build_xml(measures, plate_colours, part_table):
     return xml_string
 
 
-def build_instructions(G, meh, pos, colors, w, h, ratio, name):
+def build_instructions(G, meh, pos, print_colors, w, h, ratio, name):
     i = 0
     nodes_draw = []
     edges_draw = list(G.subgraph(meh[-1]).edges())
@@ -213,36 +202,33 @@ def build_instructions(G, meh, pos, colors, w, h, ratio, name):
     while i < len(meh):
         nodes_draw.extend(meh[i])
         edges_draw.extend(G.subgraph(meh[i]).edges())
+        
+        if i == len(meh) - 1:
+            plt.figure(figsize=(int(10*ratio),10))
 
-        plt.figure(figsize=(9*ratio,9))
+            nx.draw(chassis_graph, pos={1: [w,1], 2: [w,h], 3: [-1,1], 4: [-1,h]}, node_color="red", 
+                    node_shape="s", width=0.0)
+            nx.draw(G, nodelist=nodes_draw, pos=pos, node_color="black", node_size=200, 
+                    edgelist=edges_draw, width=6.0, node_shape="o")
+            nx.draw(G, nodelist=nodes_draw, pos=pos, node_color=[print_colors[c] for c in nodes_draw], 
+                    node_size=150, edgelist=edges_draw, width=5.0, node_shape="o", 
+                    edge_color=[print_colors[c[0]] for c in edges_draw])
 
-        nx.draw(chassis_graph, pos={1: [w,1], 2: [w,h], 3: [-1,1], 4: [-1,h]}, node_color="red", node_size=100,
-            node_shape="s")
-        nx.draw(G, nodelist=nodes_draw, pos=pos, node_color=[colors[c] for c in nodes_draw], node_size=100,
-            edgelist=edges_draw, width=3.0)
-        plt.savefig("{}/{}.png".format(path_name,i+1))
+            plt.savefig("{}/{}.pdf".format(path_name, i), bbox_inches='tight')
 
-        plt.close()
+        plt.close("all")
         i += 1
 
 def main(args):
-    assert args.maxsize <= 12 and args.maxsize > 0, "Brick size can only be between 1 and 12."
-    image = Image.open(args.input)
+    assert args.maxlength <= 12 and args.maxlength > 0, "Brick length can only be between 1 and 12."
+    assert args.maxwidth <= 6 and args.maxwidth > 0, "Brick width can only be between 1 and 6."
+    image = Image.open(args.input).convert("RGB")
     name = args.input.split(".")[0]
     current_colours = get_colours()
-    nn = fit_NN(current_colours, args.rgb)
-
-    w10 = int(image.size[0]/10)
-    h10 = int(image.size[1]/10)
-    ratio = image.size[0]/image.size[1]
 
     print("Using image {}".format(args.input))
 
-    pixelated = image.filter(ImageFilter.MedianFilter(args.smooth)).resize((2*w10,2*h10))
-
-    pixelated = np.array(pixelated)
-    pixelated = np.apply_along_axis(pic2brick, 2, pixelated, nn, current_colours)
-    pixelated = Image.fromarray(np.uint8(pixelated), mode="RGB")
+    ratio = image.size[0]/image.size[1]
 
     max_size = args.size
 
@@ -252,45 +238,75 @@ def main(args):
     else:
         w = max_size
         h = int(max_size/ratio)
+
+    pixelated = image.filter(ImageFilter.MedianFilter(args.smooth)).resize((w,h), resample=0)
+    pixelated = np.array(pixelated, dtype=np.uint8)
+    if args.lab:
+        pixelated = colorcv.rgb2lab(pixelated/255)
+        distances = distance_matrix(pixelated.reshape(-1,3), current_colours[["l","a","b2"]].values)
+        faster = current_colours.iloc[np.argmin(distances, axis=1), -3:].values.reshape(pixelated.shape)
+        pixelated = Image.fromarray(np.uint8(colorcv.lab2rgb(faster)*255), mode="RGB")
+    else:
+        distances = distance_matrix(pixelated.reshape(-1,3), current_colours[["r","g","b"]].values)
+        faster = current_colours.iloc[np.argmin(distances, axis=1), -6:-3].values.reshape(pixelated.shape)
+        pixelated = Image.fromarray(np.uint8(faster), mode="RGB")
         
-    final = pixelated.resize((w,h))
-    final_arr = np.array(final)
+    final = pixelated
+    final_arr = colorcv.rgb2lab(np.array(final)/255)
 
     preview =  "{}_preview.png".format(name)
-    final.resize(image.size).save(preview)
+    final.resize(image.size, resample=0).save(preview)
     print("Saved preview under {}".format(preview))
 
     new_p = np.zeros((final.size))
     G = nx.Graph()
     pos = {}
     colors = {}
+    print_colors = {}
+    named_colors = {}
     i = 0
+    color_transpose = {11: np.zeros(3), 63: np.array([0.0745098 , 0.18823529, 0.36666667]),
+                       88: np.array([0.588235, 0.235294, 0]), 71: np.array([0.7098 , 0.18039, 0.396])}
+    critical_colors = set([])
 
     for x in range(final.size[1]):
         for y in range(final.size[0]):
             G.add_node(str(x)+"|"+str(y), x=x, y=y)
-            colors[str(x)+"|"+str(y)] = final_arr[x,y]/255
+            colors[str(x)+"|"+str(y)] = final_arr[x,y]
+            named_color = current_colours. \
+                          loc[np.all(np.isclose(current_colours[["l","a","b2"]], final_arr[x,y], atol=1), 
+                                     axis=1),
+                             "ID"].values[0]
+            named_colors[str(x)+"|"+str(y)] = named_color
+
+            if named_color in color_transpose.keys():
+                print_color = color_transpose[named_color]
+            else:
+                print_color = colorcv.lab2rgb(final_arr[x,y].reshape(1,1,3)).flatten()
+            print_colors[str(x)+"|"+str(y)] = print_color
+
             pos[str(x)+"|"+str(y)] = [y,h-x]
             i += 1
-            
+
             if x!=0 and np.array_equal(final_arr[x,y], final_arr[x-1,y]):
                 G.add_edge(str(x)+"|"+str(y), str(x-1)+"|"+str(y))
-                
+
             if y!=0 and np.array_equal(final_arr[x,y], final_arr[x,y-1]):
                 G.add_edge(str(x)+"|"+str(y), str(x)+"|"+str(y-1))
 
-    meh = find_rectangles(G, max_size=args.maxsize)
+    meh = find_rectangles(G, named_colors=named_colors, maxim_size=args.maxlength, 
+                          maxim_width=args.maxwidth, critical_colors=critical_colors)
 
     part_table = get_part_list()
-    measures, plate_colours = get_parts(meh, nn, colors, current_colours)
+    measures, plate_colours = get_parts(meh, named_colors)
 
     xml = build_xml(measures, plate_colours, part_table)
     with open(args.output, "w") as xml_file:
         xml_file.write(xml)
 
-    print("Saved xml to {}".format(args.output))
+    print("Saved xml with {} parts to {}".format(len(meh), args.output))
 
-    build_instructions(G, meh, pos, colors, w, h, ratio, name)
+    build_instructions(G, meh, pos, print_colors, w, h, ratio, name)
     print("Saved instructions to 'instructions_{}/'".format(name))
 
 if __name__ == '__main__':
@@ -305,9 +321,11 @@ if __name__ == '__main__':
 
     parser.add_argument("-s", "--size", type=int, help="Max size for the output image in pixels/studs. Defaults to 32.", default=32)
 
-    parser.add_argument("-ms", "--maxsize", type=int, help="Max size of an individual LEGO plate in studs. Defaults to 12.", default=12)
+    parser.add_argument("-ml", "--maxlength", type=int, help="Max length of an individual LEGO plate in studs. Defaults to 12.", default=12)
 
-    parser.add_argument("-rgb", type=int, help="If not zero, RGB is used for distances between pixels, otherwise LAB. Defaults to 1.", default=1)
+    parser.add_argument("-mw", "--maxwidth", type=int, help="Max width of an individual LEGO plate in studs. Defaults to 6.", default=6)
+
+    parser.add_argument("-lab", type=int, help="If not zero, LAB is used for distances between pixels, otherwise RGB. Defaults to 1.", default=1)
 
     args = parser.parse_args()
 
