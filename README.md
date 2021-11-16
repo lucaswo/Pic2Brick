@@ -20,7 +20,7 @@ The options should be printed if you call `python3 pic2brick.py -h`
 
 ```
 >>> python3 pic2brick.py -h
-usage: pic2brick.py [-h] -i INPUT [-o OUTPUT] [-sm SMOOTH] [-s SIZE]
+usage: pic2brick.py [-h] -i INPUT -o OUTPUT [-l LABELS] [-sm SMOOTH] [-s SIZE]
                  [-ms MAXSIZE] [-rgb RGB]
 
 Build your image with bricks.
@@ -28,10 +28,9 @@ Build your image with bricks.
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT, --input INPUT
-                        input image
+                        Input image
   -o OUTPUT, --output OUTPUT
-                        output xml file. Defaults to out.xml and overwrites
-                        any previous output with the same name.
+                        Output xml file.
   -l LABELS, --labels LABELS
                         If not zero, labels are set in the instructions to clarify colors.
                         Defaults to 0.

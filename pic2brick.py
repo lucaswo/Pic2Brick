@@ -323,9 +323,9 @@ def main(args):
 if __name__ == '__main__':
     parser = ArgumentParser(description='Build your image with bricks.')
 
-    parser.add_argument("-i", "--input", type=str, help="input image", required=True)
+    parser.add_argument("-i", "--input", type=str, help="Input image", required=True)
 
-    parser.add_argument("-o", "--output", type=str, help="output xml file", required=True)
+    parser.add_argument("-o", "--output", type=str, help="Output xml file", required=True)
 
     parser.add_argument("-l", "--labels", type=int, help="If not zero, labels are set in the instructions to clarify colors. Defaults to 0.", default=0)
 
