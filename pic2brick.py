@@ -126,6 +126,7 @@ def find_rectangles(G, named_colors, maxim_size=12, maxim_width=6, critical_colo
 def get_parts(meh, named_colors):
     measures = []
     plate_colours = []
+    labels = {}
 
     for rect in meh:
         color = named_colors[rect[0]]
@@ -141,8 +142,10 @@ def get_parts(meh, named_colors):
         
         measures.append("{} x {}".format(min(max_x-min_x+1, max_y-min_y+1), max(max_x-min_x+1, max_y-min_y+1)))
         plate_colours.append(color)
+
+        labels[rect[0]] = color
     
-    return measures, plate_colours
+    return measures, plate_colours, labels
 
 def get_part_list():
     headers = {
@@ -186,7 +189,7 @@ def build_xml(measures, plate_colours, part_table):
     return xml_string
 
 
-def build_instructions(G, meh, pos, print_colors, w, h, ratio, name):
+def build_instructions(G, meh, pos, print_colors, w, h, ratio, name, labels=None):
     i = 0
     nodes_draw = []
     edges_draw = list(G.subgraph(meh[-1]).edges())
@@ -204,7 +207,8 @@ def build_instructions(G, meh, pos, print_colors, w, h, ratio, name):
         edges_draw.extend(G.subgraph(meh[i]).edges())
         
         if i == len(meh) - 1:
-            plt.figure(figsize=(int(10*ratio),10))
+            s = max(w,h)//2
+            plt.figure(figsize=(int(s*ratio),s))
 
             nx.draw(chassis_graph, pos={1: [w,1], 2: [w,h], 3: [-1,1], 4: [-1,h]}, node_color="red", 
                     node_shape="s", width=0.0)
@@ -213,6 +217,13 @@ def build_instructions(G, meh, pos, print_colors, w, h, ratio, name):
             nx.draw(G, nodelist=nodes_draw, pos=pos, node_color=[print_colors[c] for c in nodes_draw], 
                     node_size=150, edgelist=edges_draw, width=5.0, node_shape="o", 
                     edge_color=[print_colors[c[0]] for c in edges_draw])
+
+            if labels:
+                nx.draw_networkx_labels(G, pos=pos, font_size=8, font_color="whitesmoke",
+                                labels={k:v for k,v in labels.items() if max(print_colors[k]) < 0.75})
+        
+                nx.draw_networkx_labels(G, pos=pos, font_size=8, font_color="black",
+                                labels={k:v for k,v in labels.items() if max(print_colors[k]) >= 0.75})
 
             plt.savefig("{}/{}.pdf".format(path_name, i), bbox_inches='tight')
 
@@ -298,7 +309,7 @@ def main(args):
                           maxim_width=args.maxwidth, critical_colors=critical_colors)
 
     part_table = get_part_list()
-    measures, plate_colours = get_parts(meh, named_colors)
+    measures, plate_colours, labels = get_parts(meh, named_colors)
 
     xml = build_xml(measures, plate_colours, part_table)
     with open(args.output, "w") as xml_file:
@@ -306,7 +317,7 @@ def main(args):
 
     print("Saved xml with {} parts to {}".format(len(meh), args.output))
 
-    build_instructions(G, meh, pos, print_colors, w, h, ratio, name)
+    build_instructions(G, meh, pos, print_colors, w, h, ratio, name, labels=labels if args.labels else None)
     print("Saved instructions to 'instructions_{}/'".format(name))
 
 if __name__ == '__main__':
@@ -315,6 +326,8 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--input", type=str, help="input image", required=True)
 
     parser.add_argument("-o", "--output", type=str, help="output xml file", required=True)
+
+    parser.add_argument("-l", "--labels", type=int, help="If not zero, labels are set in the instructions to clarify colors. Defaults to 0.", default=0)
 
     parser.add_argument("-sm", "--smooth", type=int, 
         help="Smoothing factor for prefiltering. Increase for removing artifacts. Can only be odd. Defaults to 1.", default=1)

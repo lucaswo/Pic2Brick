@@ -32,6 +32,8 @@ optional arguments:
   -o OUTPUT, --output OUTPUT
                         output xml file. Defaults to out.xml and overwrites
                         any previous output with the same name.
+  -l LABELS, --labels LABELS
+                        If not zero, labels are set in the instructions to clarify colors. Defaults to 0.
   -sm SMOOTH, --smooth SMOOTH
                         Smoothing factor for prefiltering. Increase for
                         removing artifacts. Can only be odd. Defaults to 1.
