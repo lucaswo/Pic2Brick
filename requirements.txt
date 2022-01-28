@@ -1,9 +1,10 @@
 requests
 beautifulsoup4
 pandas
-pillow
+Pillow
 numpy
 networkx
 matplotlib
-skimage
+lxml
 scipy
+scikit-image
